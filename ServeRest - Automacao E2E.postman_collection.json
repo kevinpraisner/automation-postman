@@ -1,0 +1,713 @@
+{
+  "info": {
+    "_postman_id": "caa5183b-1a59-445c-b336-ca7887f438ed",
+    "name": "ServeRest - Automacao E2E",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "27838587"
+  },
+  "item": [
+    {
+      "name": "1. Autenticação e Segurança",
+      "item": [
+        {
+          "name": "1. Criar Usuário Admin",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Gera um email e senha\r",
+                  "let emailDinamico = pm.variables.replaceIn('{{$randomEmail}}');\r",
+                  "let senhaDinamica = pm.variables.replaceIn('{{$randomPassword}}');\r",
+                  "\r",
+                  "// Salva esses dados no Environment para o login\r",
+                  "pm.environment.set(\"email_valido\", emailDinamico);\r",
+                  "pm.environment.set(\"senha_valida\", senhaDinamica);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// 1. Valida o Status Code 201 (Created)\r",
+                  "pm.test(\"Status code deve ser 201\", function () {\r",
+                  "    pm.response.to.have.status(201);\r",
+                  "});\r",
+                  "\r",
+                  "// 2. Mensagem de sucesso\r",
+                  "pm.test(\"Validar mensagem de sucesso\", function () {\r",
+                  "    let resposta = pm.response.json();\r",
+                  "    pm.expect(resposta.message).to.eql(\"Cadastro realizado com sucesso\");\r",
+                  "});\r",
+                  "\r",
+                  "// 3. Salva o ID do usuário \r",
+                  "let resposta = pm.response.json();\r",
+                  "pm.environment.set(\"id_usuario\", resposta._id);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"nome\": \"QA Automation Postman\",\r\n  \"email\": \"{{email_valido}}\",\r\n  \"password\": \"{{senha_valida}}\",\r\n  \"administrador\": \"true\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/usuarios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2. Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// 1. Valida se o login foi feito com sucesso (Status 200)\r",
+                  "pm.test(\"Status code deve ser 200\", function () {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "// 2. Valida a mensagem de retorno\r",
+                  "pm.test(\"Validar mensagem de sucesso\", function () {\r",
+                  "    let resposta = pm.response.json();\r",
+                  "    pm.expect(resposta.message).to.eql(\"Login realizado com sucesso\");\r",
+                  "});\r",
+                  "\r",
+                  "// 3. Captura o Token, remove a palavra \"Bearer \" e salva no ambiente (correção)\r",
+                  "let resposta = pm.response.json();\r",
+                  "\r",
+                  "// Extrai o token e limpa o texto desnecessário\r",
+                  "let tokenLimpo = resposta.authorization.replace(\"Bearer \", \"\");\r",
+                  "\r",
+                  "pm.environment.set(\"token\", tokenLimpo);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"email\": \"{{email_valido}}\",\r\n  \"password\": \"{{senha_valida}}\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3. Login Inválido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// 1. Valida a regra de negócio: Bloqueio de credencial (401)\r",
+                  "pm.test(\"Status code deve ser 401 Unauthorized\", function () {\r",
+                  "    pm.response.to.have.status(401);\r",
+                  "});\r",
+                  "\r",
+                  "// 2. Valida a mensagem exata do erro\r",
+                  "pm.test(\"Validar mensagem de erro ao falhar login\", function () {\r",
+                  "    let resposta = pm.response.json();\r",
+                  "    pm.expect(resposta.message).to.eql(\"Email e/ou senha inválidos\");\r",
+                  "});\r",
+                  "\r",
+                  "// 3. Teste de Performance: Garante que a API respondeu rápido\r",
+                  "let timeout = parseInt(pm.environment.get(\"timeout_esperado\"));\r",
+                  "pm.test(\"Tempo de resposta deve ser menor que \" + timeout + \"ms\", function () {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(timeout);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"email\": \"{{email_invalido}}\",\r\n  \"password\": \"senha_qualquer_errada\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4. Verificar Métodos Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// 1. Valida se o servidor respondeu com sucesso 204 \r",
+                  "pm.test(\"Status code deve ser 204 No Content\", function () {\r",
+                  "    pm.response.to.have.status(204);\r",
+                  "});\r",
+                  "\r",
+                  "// 2. Valida os cabeçalhos de segurança\r",
+                  "pm.test(\"Deve retornar os métodos permitidos no Header\", function () {\r",
+                  "    pm.response.to.have.header(\"access-control-allow-methods\");\r",
+                  "    \r",
+                  "    // Extrai o valor do header e verifica se inclui POST\r",
+                  "    let metodosPermitidos = pm.response.headers.get(\"access-control-allow-methods\");\r",
+                  "    pm.expect(metodosPermitidos).to.include(\"POST\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "OPTIONS",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "login"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Ciclo de Vida do Produto",
+      "item": [
+        {
+          "name": "1. Cadastrar Produto",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Gera um número aleatório e monta o nome do produto\r",
+                  "let numeroAleatorio = pm.variables.replaceIn('{{$randomInt}}');\r",
+                  "pm.environment.set(\"nome_produto\", \"Monitor Ultrawide QA \" + numeroAleatorio);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// 1. Valida a criação\r",
+                  "pm.test(\"Status code deve ser 201\", function () {\r",
+                  "    pm.response.to.have.status(201);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Validar mensagem de sucesso\", function () {\r",
+                  "    let resposta = pm.response.json();\r",
+                  "    pm.expect(resposta.message).to.eql(\"Cadastro realizado com sucesso\");\r",
+                  "});\r",
+                  "\r",
+                  "// 2. Salva o ID do produto no ambiente para o carrinho\r",
+                  "let resposta = pm.response.json();\r",
+                  "pm.environment.set(\"id_produto\", resposta._id);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token}}",
+                "type": "text",
+                "disabled": true
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"nome\": \"{{nome_produto}}\",\r\n  \"preco\": 1500,\r\n  \"descricao\": \"Monitor para automação de testes\",\r\n  \"quantidade\": 50\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/produtos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "produtos"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2. Consultar Produto",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// 1. Valida se o produto foi encontrado (200 OK)\r",
+                  "pm.test(\"Status code deve ser 200 OK\", function () {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "// 2. Valida se o nome do produto retornado \r",
+                  "pm.test(\"Validar integridade dos dados (Nome do Produto)\", function () {\r",
+                  "    let resposta = pm.response.json();\r",
+                  "    let nomeSalvo = pm.environment.get(\"nome_produto\");\r",
+                  "    \r",
+                  "    pm.expect(resposta.nome).to.eql(nomeSalvo);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/produtos/{{id_produto}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "produtos",
+                "{{id_produto}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3. Atualizar Produto",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// 1. Valida se a alteração foi aceita com sucesso (200 OK)\r",
+                  "pm.test(\"Status code deve ser 200 OK\", function () {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "// 2. Valida a mensagem de sucesso retornada pela API\r",
+                  "pm.test(\"Validar mensagem de alteração realizada\", function () {\r",
+                  "    let resposta = pm.response.json();\r",
+                  "    pm.expect(resposta.message).to.eql(\"Registro alterado com sucesso\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"nome\": \"{{nome_produto}}\",\r\n  \"preco\": 1390,\r\n  \"descricao\": \"Monitor Ultrawide - Descrição atualizada via automação\",\r\n  \"quantidade\": 15\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/produtos/{{id_produto}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "produtos",
+                "{{id_produto}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4. Cadastrar Produto Duplicado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// 1. Regra de negócio: Não deve permitir duplicidade (400 Bad Request)\r",
+                  "pm.test(\"Status code deve ser 400 Bad Request\", function () {\r",
+                  "    pm.response.to.have.status(400);\r",
+                  "});\r",
+                  "\r",
+                  "// 2. Valida a mensagem explicativa do erro\r",
+                  "pm.test(\"Validar mensagem de erro para produto duplicado\", function () {\r",
+                  "    let resposta = pm.response.json();\r",
+                  "    pm.expect(resposta.message).to.eql(\"Já existe produto com esse nome\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"nome\": \"{{nome_produto}}\",\r\n  \"preco\": 1500,\r\n  \"descricao\": \"Tentativa de duplicidade\",\r\n  \"quantidade\": 10\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/produtos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "produtos"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              ""
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Fluxos de Negócio",
+      "item": [
+        {
+          "name": "1. Criar Carrinho",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// 1. Valida o Status Code 201 (Created)\r",
+                  "pm.test(\"Status code deve ser 201\", function () {\r",
+                  "    pm.response.to.have.status(201);\r",
+                  "});\r",
+                  "\r",
+                  "// 2. Valida a mensagem de sucesso\r",
+                  "pm.test(\"Validar mensagem de sucesso\", function () {\r",
+                  "    let resposta = pm.response.json();\r",
+                  "    pm.expect(resposta.message).to.eql(\"Cadastro realizado com sucesso\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token}}",
+                "type": "text",
+                "disabled": true
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"produtos\": [\r\n    {\r\n      \"idProduto\": \"{{id_produto}}\",\r\n      \"quantidade\": 1\r\n    }\r\n  ]\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/carrinhos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "carrinhos"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2. Consultar Carrinho",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// 1. Valida sucesso da requisição (200 OK)\r",
+                  "pm.test(\"Status code deve ser 200 OK\", function () {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "// 2. Valida se a API retornou o carrinho atrelado ao usuário\r",
+                  "pm.test(\"Deve retornar o carrinho do usuário atual\", function () {\r",
+                  "    let resposta = pm.response.json();\r",
+                  "    \r",
+                  "    // Garante que a lista não veio vazia\r",
+                  "    pm.expect(resposta.quantidade).to.be.above(0);\r",
+                  "    \r",
+                  "    // Valida se o ID do dono do carrinho bate com o ID\r",
+                  "    pm.expect(resposta.carrinhos[0].idUsuario).to.eql(pm.environment.get(\"id_usuario\"));\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/carrinhos?idUsuario={{id_usuario}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "carrinhos"
+              ],
+              "query": [
+                {
+                  "key": "idUsuario",
+                  "value": "{{id_usuario}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3. Excluir Carrinho",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code deve ser 200\", function () {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Validar exclusão do carrinho\", function () {\r",
+                  "    let resposta = pm.response.json();\r",
+                  "    pm.expect(resposta.message).to.eql(\"Registro excluído com sucesso. Estoque dos produtos reabastecido\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token}}",
+                "type": "text",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/carrinhos/cancelar-compra",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "carrinhos",
+                "cancelar-compra"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4. Excluir Usuário",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code deve ser 200\", function () {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Validar exclusão do usuário\", function () {\r",
+                  "    let resposta = pm.response.json();\r",
+                  "    pm.expect(resposta.message).to.eql(\"Registro excluído com sucesso\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/usuarios/{{id_usuario}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios",
+                "{{id_usuario}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              ""
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              ""
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
